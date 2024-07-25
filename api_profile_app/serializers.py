@@ -7,9 +7,7 @@ from api_profile_app.models import User
 class ProfileUserSerializer(ModelSerializer):
 
     uid = serializers.UUIDField(read_only=True)
-    username = serializers.CharField(required=False,
-                                     help_text='логин',
-                                     read_only=True)
+    username = serializers.CharField(required=False, help_text='логин',)
     first_name = serializers.CharField(required=False, help_text='имя')
     last_name = serializers.CharField(required=False, help_text='фамилия')
     gender_label = serializers.CharField(source='get_gender_display',

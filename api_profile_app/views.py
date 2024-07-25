@@ -7,7 +7,7 @@ from api_profile_app.models import User
 from api_profile_app.serializers import ProfileUserSerializer
 
 
-class UserModelViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin,
+class UserModelViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.RetrieveModelMixin,
                        viewsets.GenericViewSet):
     """
     Работа с моделью пользователя
@@ -16,6 +16,7 @@ class UserModelViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin,
     """
     queryset = User.objects
     serializer_class = ProfileUserSerializer
+    # permission_classes = [IsAuthenticated, ]
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -40,7 +41,7 @@ class UserModelViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin,
             if instance and kwargs:
                 return super().update(request, pk=instance.pk, **kwargs)
             elif instance:
-                return super().update(request, pk=instance.pk)
+                return super().retrieve(request, pk=request.pk)
             else:
                 return super().create(request, *args, **kwargs)
 
