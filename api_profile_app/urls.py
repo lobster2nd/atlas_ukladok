@@ -8,6 +8,7 @@ router = DefaultRouter()
 router.register('profile', UserModelViewSet, basename='profile')
 
 urlpatterns = [
-    path('v1/auth/profile/', UserModelViewSet.as_view({'get': 'retrieve'}),
+    path('v1/auth/profile/', UserModelViewSet.as_view(
+        {'get': 'retrieve', 'post': 'create'}),
          name='profile-detail'),
 ]

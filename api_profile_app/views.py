@@ -8,13 +8,9 @@ from api_profile_app.models import User
 from api_profile_app.serializers import ProfileUserSerializer
 
 
-class UserModelViewSet(mixins.RetrieveModelMixin,
+class UserModelViewSet(mixins.RetrieveModelMixin, mixins.CreateModelMixin,
                        viewsets.GenericViewSet):
-    """
-    Работа с моделью пользователя
-
-    Работа с моделью пользователя
-    """
+    """Работа с моделью пользователя"""
     queryset = User.objects.all()
     serializer_class = ProfileUserSerializer
 
@@ -26,6 +22,31 @@ class UserModelViewSet(mixins.RetrieveModelMixin,
 
     def get_object(self):
         return self.get_queryset()
+
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Информация о текущем пользователе
+
+        Информация о текущем пользователе
+        """
+        return super().retrieve(request, args, kwargs)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Создать нового пользователя
+
+        Создать нового пользователя
+        """
+        email = request.data.get('email')
+        user = User.objects.filter(email=email).first()
+        if user:
+            serializer = self.get_serializer(user)
+            return Response(serializer.data)
+        else:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
     # def create(self, request, *args, **kwargs):
