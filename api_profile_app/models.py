@@ -19,7 +19,7 @@ class User(AbstractUser):
     username = models.CharField(verbose_name='имя пользователя',
                                 help_text='имя пользователя',
                                 max_length=250, unique=True)
-    avatar = models.ImageField(upload_to='users_avatar', blank=True,
+    avatar = models.ImageField(upload_to='media/users_avatar', blank=True,
                                verbose_name='аватар', null=True,
                                help_text='аватар')
     gender = models.CharField(verbose_name='пол',
