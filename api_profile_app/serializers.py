@@ -8,15 +8,16 @@ from core.utils import TimestampField
 class ProfileUserSerializer(ModelSerializer):
 
     uid = serializers.UUIDField(read_only=True)
+    password = serializers.CharField(write_only=True, required=False,
+                                     help_text='пароль')
     username = serializers.CharField(required=False, help_text='логин',)
     first_name = serializers.CharField(required=False, help_text='имя')
     last_name = serializers.CharField(required=False, help_text='фамилия')
     gender_label = serializers.CharField(source='get_gender_display',
                                          required=False, read_only=True,
                                          help_text="пол")
-    birthday = TimestampField(required=False,
-                                         help_text='дата рождения')
-    email = serializers.EmailField(required=True, help_text='e-mail',)
+    birthday = TimestampField(required=False, help_text='дата рождения')
+    email = serializers.EmailField(required=False, help_text='e-mail',)
     avatar = serializers.ImageField(read_only=True,
                                     help_text='аватар',
                                     use_url=False)
@@ -28,6 +29,7 @@ class ProfileUserSerializer(ModelSerializer):
         model = User
         fields = (
             'uid',
+            'password',
             'username',
             'first_name',
             'last_name',

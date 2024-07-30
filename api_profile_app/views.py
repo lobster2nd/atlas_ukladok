@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, mixins, status
 from rest_framework.exceptions import PermissionDenied, APIException
@@ -33,20 +34,31 @@ class UserModelViewSet(mixins.RetrieveModelMixin, mixins.CreateModelMixin,
 
     def create(self, request, *args, **kwargs):
         """
-        Создать нового пользователя
+        Зарегистрировать нового пользователя
 
-        Создать нового пользователя
+        Зарегистрировать нового пользователя
         """
-        email = request.data.get('email')
-        user = User.objects.filter(email=email).first()
+        username = request.data.get('username')
+        user = User.objects.filter(username=username).first()
         if user:
-            serializer = self.get_serializer(user)
-            return Response(serializer.data)
+            # serializer = self.get_serializer(user)
+            return Response(
+                {'error': 'Такой пользователь уже существует'}, 400)
         else:
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            password = serializer.validated_data.get('password')
+            hashed_password = make_password(password)
+            serializer.validated_data['password'] = hashed_password
+
+            try:
+                serializer.save()
+                return Response(serializer.data,
+                                status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+                return Response({'error': str(e)},
+                                status=status.HTTP_400_BAD_REQUEST)
 
 
     # def create(self, request, *args, **kwargs):

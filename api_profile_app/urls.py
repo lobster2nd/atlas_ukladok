@@ -9,6 +9,9 @@ router.register('profile', UserModelViewSet, basename='profile')
 
 urlpatterns = [
     path('v1/auth/profile/', UserModelViewSet.as_view(
-        {'get': 'retrieve', 'post': 'create'}),
+        {'get': 'retrieve'}),
          name='profile-detail'),
+    path('v1/auth/register/', UserModelViewSet.as_view(
+        {'post': 'create'}),
+         name='profile-register')
 ]
