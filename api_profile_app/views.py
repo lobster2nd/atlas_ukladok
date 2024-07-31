@@ -1,8 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, mixins, status
-from rest_framework.exceptions import PermissionDenied, APIException
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from api_profile_app.models import User

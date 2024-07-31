@@ -32,7 +32,8 @@ class Placement(models.Model):
     author = models.ForeignKey(User, verbose_name='Автор',
                                on_delete=models.PROTECT)
     body_part = models.CharField(choices=BodyPart.choices, blank=True,
-                                 null=True, verbose_name='часть тела')
+                                 null=True, verbose_name='часть тела',
+                                 max_length=7)
 
     def __str__(self):
         return self.title

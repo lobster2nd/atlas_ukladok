@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     'api_auth_app',
     'api_profile_app',
+    'api_atlas_app',
 ]
 
 MIDDLEWARE = [
