@@ -10,6 +10,7 @@ from api_profile_app.serializers import ProfileUserSerializer
 
 
 class UserModelViewSet(mixins.RetrieveModelMixin, mixins.CreateModelMixin,
+                       mixins.UpdateModelMixin,
                        viewsets.GenericViewSet):
     """Работа с моделью пользователя"""
     queryset = User.objects.all()
@@ -60,24 +61,26 @@ class UserModelViewSet(mixins.RetrieveModelMixin, mixins.CreateModelMixin,
                 return Response({'error': str(e)},
                                 status=status.HTTP_400_BAD_REQUEST)
 
+    def update(self, request, *args, **kwargs):
+        """
+        Редактировать профиль
 
-    # def create(self, request, *args, **kwargs):
-    #     """
-    #     Реактирование/получение профиля текущего пользователя
-    #
-    #     Реактирование/получение профиля текущего пользователя
-    #     """
-    #     serializer = self.get_serializer(data=request.data)
-    #     _ = serializer.is_valid(raise_exception=True)
-    #     try:
-    #         instance = self.get_object()
-    #         if instance and kwargs:
-    #             return super().update(request, pk=instance.pk, **kwargs)
-    #         elif instance:
-    #             return super().retrieve(request, pk=request.pk)
-    #         else:
-    #             return super().create(request, *args, **kwargs)
-    #
-    #     except ValidationError as e:
-    #         return Response({'error': e.messages[0]},
-    #                         status=400)
+        Редактировать профиль
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data,
+                                         partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        if 'password' in request.data:
+            password = serializer.validated_data.get('password')
+            hashed_password = make_password(password)
+            serializer.validated_data['password'] = hashed_password
+
+        try:
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except ValidationError as e:
+            return Response({'error': str(e)},
+                            status=status.HTTP_400_BAD_REQUEST)
