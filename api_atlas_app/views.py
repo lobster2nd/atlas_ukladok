@@ -56,3 +56,16 @@ class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
         Добавить новую иллюстрацию
         """
         return super().create(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Удалить иллюстрацию по ID
+
+        Удалить иллюстрацию по ID
+        """
+        instance = self.get_object()
+        if not instance:
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={'error': 'Объект не найден'})
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
