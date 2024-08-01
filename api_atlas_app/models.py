@@ -20,8 +20,6 @@ class Placement(models.Model):
 
     title = models.CharField(max_length=255, verbose_name='Название укладки')
     content = models.TextField(blank=True, null=True, verbose_name='Описание')
-    image = models.ImageField(upload_to="media/images", blank=True, null=True,
-                              verbose_name='Иллюстрация')
     video_link = models.URLField(blank=True, null=True, verbose_name='Видео')
     created_at = models.DateTimeField(auto_now_add=True,
                                       verbose_name='время создания')
@@ -30,10 +28,22 @@ class Placement(models.Model):
     is_published = models.BooleanField(default=True,
                                        verbose_name='Опубликовано')
     author = models.ForeignKey(User, verbose_name='Автор',
-                               on_delete=models.PROTECT)
+                               on_delete=models.PROTECT,
+                               related_name='placements')
     body_part = models.CharField(choices=BodyPart.choices, blank=True,
                                  null=True, verbose_name='часть тела',
                                  max_length=7)
 
     def __str__(self):
         return self.title
+
+
+class Image(models.Model):
+    """Модель иллюстрации"""
+    photo = models.ImageField(upload_to="media/images", blank=True, null=True,
+                              verbose_name='Иллюстрация')
+    description = models.CharField(verbose_name='Комментарий к изображению',
+                                   max_length=255)
+    placement = models.ForeignKey(Placement, verbose_name='Укладка',
+                                  on_delete=models.PROTECT,
+                                  related_name='images')

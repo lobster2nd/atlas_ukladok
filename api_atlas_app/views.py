@@ -1,10 +1,14 @@
 from rest_framework import viewsets, mixins, status
+from rest_framework.parsers import MultiPartParser, FormParser, \
+    FileUploadParser
+from rest_framework.response import Response
+from rest_framework.status import HTTP_201_CREATED
 
-from .models import Placement
-from .serializers import PlacementSerializer
+from .models import Placement, Image
+from .serializers import PlacementSerializer, ImageSerializer
 
 
-class PlacementModelViewSet(
+class PlacementModelViewSet(mixins.CreateModelMixin,
                             mixins.ListModelMixin, viewsets.GenericViewSet):
     """Работа с укладками"""
 
@@ -18,3 +22,37 @@ class PlacementModelViewSet(
         Получить список укладок
         """
         return super().list(request, args, kwargs)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Добавить укладку
+
+        Добавить укладку
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=HTTP_201_CREATED,
+                        headers=headers)
+
+    def perform_create(self, serializer):
+        author = self.request.user
+        return serializer.save(author=author)
+
+
+class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
+                        viewsets.GenericViewSet):
+    """Работа с иллюстрациями"""
+
+    queryset = Image.objects.all()
+    serializer_class = ImageSerializer
+    parser_classes = (MultiPartParser, FormParser, FileUploadParser)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Добавить новую иллюстрацию
+
+        Добавить новую иллюстрацию
+        """
+        return super().create(request, *args, **kwargs)
