@@ -2,6 +2,7 @@ import time
 from datetime import datetime
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.pagination import PageNumberPagination
 
 
 def to_stamp(value: datetime):
@@ -37,3 +38,9 @@ class TimestampField(serializers.IntegerField):
 
     def to_internal_value(self, data):
         return to_date(data)
+
+
+class ProjectPagination(PageNumberPagination):
+    """Пагинация проекта"""
+    page_size_query_param = 'page_size'
+    max_page_size = 5

@@ -4,6 +4,8 @@ from rest_framework.parsers import MultiPartParser, FormParser, \
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 
+
+from core.utils import ProjectPagination
 from .models import Placement, Image
 from .serializers import PlacementSerializer, ImageSerializer
 
@@ -14,6 +16,7 @@ class PlacementModelViewSet(mixins.CreateModelMixin,
 
     queryset = Placement.objects.all()
     serializer_class = PlacementSerializer
+    pagination_class = ProjectPagination
 
     def list(self, request, *args, **kwargs):
         """
@@ -48,6 +51,7 @@ class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser, FileUploadParser)
+    pagination_class = ProjectPagination
 
     def create(self, request, *args, **kwargs):
         """
