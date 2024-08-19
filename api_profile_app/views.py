@@ -6,6 +6,7 @@ from rest_framework.response import Response
 
 from api_profile_app.models import User
 from api_profile_app.serializers import ProfileUserSerializer
+from core.utils import ProjectPagination
 
 
 class UserModelViewSet(mixins.RetrieveModelMixin, mixins.CreateModelMixin,
@@ -14,6 +15,7 @@ class UserModelViewSet(mixins.RetrieveModelMixin, mixins.CreateModelMixin,
     """Работа с моделью пользователя"""
     queryset = User.objects.all()
     serializer_class = ProfileUserSerializer
+    pagination_class = ProjectPagination
 
     def get_queryset(self):
         if self.request.user.is_authenticated:

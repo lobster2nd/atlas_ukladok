@@ -4,6 +4,8 @@ from rest_framework.parsers import MultiPartParser, FormParser, \
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 
+
+from core.utils import ProjectPagination
 from .models import Placement, Image
 from .serializers import PlacementSerializer, ImageSerializer
 
@@ -14,6 +16,7 @@ class PlacementModelViewSet(mixins.CreateModelMixin,
 
     queryset = Placement.objects.all()
     serializer_class = PlacementSerializer
+    pagination_class = ProjectPagination
 
     def list(self, request, *args, **kwargs):
         """
@@ -48,6 +51,7 @@ class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
     parser_classes = (MultiPartParser, FormParser, FileUploadParser)
+    pagination_class = ProjectPagination
 
     def create(self, request, *args, **kwargs):
         """
@@ -56,3 +60,16 @@ class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
         Добавить новую иллюстрацию
         """
         return super().create(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Удалить иллюстрацию по ID
+
+        Удалить иллюстрацию по ID
+        """
+        instance = self.get_object()
+        if not instance:
+            return Response(status=status.HTTP_404_NOT_FOUND,
+                            data={'error': 'Объект не найден'})
+        self.perform_destroy(instance)
+        return Response(status=status.HTTP_204_NO_CONTENT)
