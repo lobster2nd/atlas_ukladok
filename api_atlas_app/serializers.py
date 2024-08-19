@@ -32,6 +32,7 @@ class PlacementSerializer(ModelSerializer):
         fields = [
             'id',
             'title',
+            'body_part',
             'content',
             'video_link',
             'is_published',
