@@ -1,10 +1,8 @@
-import os
 import requests
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message, LabeledPrice, PreCheckoutQuery, \
-    ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 
 from dotenv import load_dotenv
 
@@ -12,10 +10,12 @@ load_dotenv()
 
 router = Router()
 
+KEYWORDS = ['Голова', 'Позвоночник', 'Конечности', 'Грудь', 'Живот']
+
 main_kb = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='Голова'), KeyboardButton(text='Позвоночник')],
-    [KeyboardButton(text='Конечности'), KeyboardButton(text='Грудь')],
-    [KeyboardButton(text='Живот')]
+    [KeyboardButton(text=KEYWORDS[0]), KeyboardButton(text=KEYWORDS[1])],
+    [KeyboardButton(text=KEYWORDS[2]), KeyboardButton(text=KEYWORDS[3])],
+    [KeyboardButton(text=KEYWORDS[4])]
 ], resize_keyboard=True)
 
 
@@ -26,7 +26,7 @@ async def cmd_start(message: Message):
                          )
 
 
-@router.message(F.text == 'Голова')
+@router.message(F.text.in_(KEYWORDS))
 async def request_head(message: Message):
     url = 'http://127.0.0.1:8000/api/v1/atlas/placement/'
     response = requests.get(url).json()
