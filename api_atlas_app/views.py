@@ -12,7 +12,7 @@ from .models import Placement, Image
 from .serializers import PlacementSerializer, ImageSerializer
 
 
-class PlacementModelViewSet(mixins.CreateModelMixin,
+class PlacementModelViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin,
                             mixins.ListModelMixin, viewsets.GenericViewSet):
     """Работа с укладками"""
 
@@ -46,6 +46,14 @@ class PlacementModelViewSet(mixins.CreateModelMixin,
     def perform_create(self, serializer):
         author = self.request.user
         return serializer.save(author=author)
+
+    def retrieve(self, request,  *args, **kwargs):
+        """
+        Получить укладку по id
+
+        Получить укладку по id
+        """
+        return super().retrieve(request, *args, **kwargs)
 
 
 class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
