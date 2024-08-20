@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     'rest_framework_simplejwt',
     'drf_yasg',
+    'django_filters',
 
     'api_auth_app',
     'api_profile_app',

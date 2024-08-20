@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, status
 from rest_framework.parsers import MultiPartParser, FormParser, \
     FileUploadParser
@@ -6,6 +7,7 @@ from rest_framework.status import HTTP_201_CREATED
 
 
 from core.utils import ProjectPagination
+from .filters import PlacementFilter
 from .models import Placement, Image
 from .serializers import PlacementSerializer, ImageSerializer
 
@@ -16,6 +18,8 @@ class PlacementModelViewSet(mixins.CreateModelMixin,
 
     queryset = Placement.objects.all()
     serializer_class = PlacementSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = PlacementFilter
     pagination_class = ProjectPagination
 
     def list(self, request, *args, **kwargs):
