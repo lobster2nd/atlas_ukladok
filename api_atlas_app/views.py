@@ -1,11 +1,13 @@
+import datetime
+
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, mixins, status
+from rest_framework import viewsets, mixins, status, filters
 from rest_framework.parsers import MultiPartParser, FormParser, \
     FileUploadParser
 from rest_framework.response import Response
 from rest_framework.status import HTTP_201_CREATED
 
-
+from api_profile_app.models import User
 from core.utils import ProjectPagination
 from .filters import PlacementFilter
 from .models import Placement, Image
@@ -16,11 +18,13 @@ class PlacementModelViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin,
                             mixins.ListModelMixin, viewsets.GenericViewSet):
     """Работа с укладками"""
 
-    queryset = Placement.objects.all()
+    queryset = Placement.objects.filter(is_published=True)
     serializer_class = PlacementSerializer
-    filter_backends = (DjangoFilterBackend,)
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = PlacementFilter
     pagination_class = ProjectPagination
+    ordering_fields = ['created_at', 'title']
+    ordering = ['-created_at']
 
     def list(self, request, *args, **kwargs):
         """
@@ -44,7 +48,14 @@ class PlacementModelViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin,
                         headers=headers)
 
     def perform_create(self, serializer):
-        author = self.request.user
+        if self.request.user.is_authenticated:
+            author = self.request.user
+        else:
+            author = User.objects.create_user(
+                username=f'Неизвестный польхователь '
+                         f'{int(datetime.datetime.now().timestamp())}',
+                password='password'
+            )
         return serializer.save(author=author)
 
     def retrieve(self, request,  *args, **kwargs):
