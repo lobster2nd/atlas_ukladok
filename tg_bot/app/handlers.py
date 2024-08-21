@@ -2,9 +2,11 @@ import os
 
 import aiohttp
 
-from aiogram import F, Router
+from aiogram import F, Router, types
 from aiogram.filters import CommandStart
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, \
+    InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from dotenv import load_dotenv
 
@@ -48,6 +50,19 @@ async def request_placements(message: Message):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             response_data = await response.json()
-    placements = [p['title'] for p in response_data]
+    placements = [p for p in response_data]
 
-    await message.answer(f'Есть такие укладки: {", ".join(placements)}')
+    builder = InlineKeyboardBuilder()
+    for placement in placements:
+        builder.button(text=placement['title'],
+                       callback_data=placement['content'])
+
+    await message.answer('Есть такие укладки:',
+                         reply_markup=builder.as_markup())
+
+
+@router.callback_query(lambda c: True)
+async def handle_placement_selection(callback_query: types.CallbackQuery):
+    print(callback_query.data)
+    content = callback_query.data
+    await callback_query.message.answer(text=content)
