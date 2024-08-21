@@ -1,4 +1,6 @@
-import requests
+import os
+
+import aiohttp
 
 from aiogram import F, Router
 from aiogram.filters import CommandStart
@@ -28,8 +30,9 @@ async def cmd_start(message: Message):
 
 
 @router.message(F.text.in_(KEYWORDS))
-async def request_head(message: Message):
-    url = 'http://127.0.0.1:8000/api/v1/atlas/placement/'
+async def request_placements(message: Message):
+    url = os.getenv('PLACEMENTS_URL')
+
     match message.text:
         case 'Голова':
             url += '?body_part=head'
@@ -42,7 +45,9 @@ async def request_head(message: Message):
         case 'Живот':
             url += '?body_part=abdomen'
 
-    response = requests.get(url).json()
-    placements = [p['title'] for p in response]
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            response_data = await response.json()
+    placements = [p['title'] for p in response_data]
 
     await message.answer(f'Есть такие укладки: {", ".join(placements)}')
