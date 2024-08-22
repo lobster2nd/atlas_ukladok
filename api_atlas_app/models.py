@@ -40,10 +40,10 @@ class Placement(models.Model):
 
 class Image(models.Model):
     """Модель иллюстрации"""
-    photo = models.ImageField(upload_to="media/images", blank=True, null=True,
-                              verbose_name='Иллюстрация')
+    photo = models.FileField(upload_to="images",
+                             verbose_name='Иллюстрация')
     description = models.CharField(verbose_name='Комментарий к изображению',
-                                   max_length=255)
+                                   max_length=255, blank=True, null=True)
     placement = models.ForeignKey(Placement, verbose_name='Укладка',
                                   on_delete=models.PROTECT,
                                   related_name='images')

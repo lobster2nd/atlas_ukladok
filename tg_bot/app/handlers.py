@@ -4,8 +4,7 @@ import aiohttp
 
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, \
-    InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from dotenv import load_dotenv
@@ -26,6 +25,7 @@ main_kb = ReplyKeyboardMarkup(keyboard=[
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
+    """Стартовое меню с выбором анатомической области"""
     await message.answer('Какая укладка вас интересует?',
                          reply_markup=main_kb
                          )
@@ -33,6 +33,8 @@ async def cmd_start(message: Message):
 
 @router.message(F.text.in_(KEYWORDS))
 async def request_placements(message: Message):
+    """Запрос списка укалдок выбранной категории"""
+
     url = os.getenv('PLACEMENTS_URL')
 
     match message.text:
@@ -55,7 +57,7 @@ async def request_placements(message: Message):
     builder = InlineKeyboardBuilder()
     for placement in placements:
         builder.button(text=placement['title'],
-                       callback_data=placement['content'])
+                       callback_data=str(placement['id']))
 
     await message.answer('Есть такие укладки:',
                          reply_markup=builder.as_markup())
@@ -63,6 +65,16 @@ async def request_placements(message: Message):
 
 @router.callback_query(lambda c: True)
 async def handle_placement_selection(callback_query: types.CallbackQuery):
-    print(callback_query.data)
-    content = callback_query.data
-    await callback_query.message.answer(text=content)
+    """В ответ на выбранную укладку возвращается текст и изображение"""
+
+    url = os.getenv('PLACEMENTS_URL') + f'{callback_query.data}/'
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            response_data = await response.json()
+    await callback_query.message.answer(text=response_data['content'])
+
+    if response_data['images']:
+        media_url = os.getenv('MEDIA_URL')
+        img_list = [media_url + i['photo'] for i in response_data['images']]
+        images = '\n'.join(img_list)
+        await callback_query.message.answer(f'Иллюстрации: {images}')

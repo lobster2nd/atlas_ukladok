@@ -10,9 +10,12 @@ from api_profile_app.models import User
 
 
 class ImageSerializer(ModelSerializer):
+    photo = serializers.FileField(use_url=False)
+    photo_url = serializers.ImageField(use_url=True, read_only=True)
+
     class Meta:
         model = Image
-        fields = ['photo', 'description', 'placement']
+        fields = ['photo', 'photo_url', 'description', 'placement']
 
 
 
