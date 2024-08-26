@@ -1,4 +1,5 @@
 import datetime
+import pprint
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, status, filters
@@ -51,11 +52,12 @@ class PlacementModelViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin,
         if self.request.user.is_authenticated:
             author = self.request.user
         else:
-            author = User.objects.create_user(
-                username=f'Неизвестный польхователь '
-                         f'{int(datetime.datetime.now().timestamp())}',
-                password='password'
-            )
+            author, created = User.objects.get_or_create(
+                username='Неизвестный пользователь')
+
+            if created:
+                author.set_password('password')
+                author.save()
         return serializer.save(author=author)
 
     def retrieve(self, request,  *args, **kwargs):
