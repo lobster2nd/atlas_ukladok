@@ -3,14 +3,11 @@ import os
 import aiohttp
 
 from aiogram import F, Router, types
-from aiogram.filters import CommandStart
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 import logging
-
-from django.template.defaultfilters import title
 
 from .states import PlacementAdd
 
@@ -25,13 +22,12 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 KEYWORDS = ['Голова', 'Позвоночник', 'Конечности', 'Грудь', 'Живот',
-            'Весь список', 'Добавить укладку']
+            'Весь список']
 
 main_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text=KEYWORDS[0]), KeyboardButton(text=KEYWORDS[1])],
     [KeyboardButton(text=KEYWORDS[2]), KeyboardButton(text=KEYWORDS[3])],
     [KeyboardButton(text=KEYWORDS[4]), KeyboardButton(text=KEYWORDS[5])],
-    [KeyboardButton(text=KEYWORDS[6])]
 ], resize_keyboard=True)
 
 body_parts_inline_kb = InlineKeyboardBuilder()
@@ -52,13 +48,15 @@ async def cmd_start(message: Message):
                          reply_markup=main_kb
                          )
 
-@router.message(F.text == 'Добавить укладку')
+
+@router.message(Command('add', prefix='/'))
 async def add_placement(message: Message, state: FSMContext):
     await state.set_state(PlacementAdd.title)
     await message.answer('Выберете анатомическую область',
                          reply_markup=body_parts_inline_kb.as_markup())
 
-@router.callback_query(lambda c: c.data in KEYWORDS[:5])
+
+@router.callback_query(lambda c: c.data in KEYWORDS)
 async def handle_body_part_selection(callback_query: types.CallbackQuery,
                                      state: FSMContext):
     selected_part = callback_query.data
@@ -68,20 +66,48 @@ async def handle_body_part_selection(callback_query: types.CallbackQuery,
     await callback_query.message.answer(f'Вы выбрали: {selected_part} \n'
                                         f'Введите текст')
 
+
 @router.message(PlacementAdd.content, F.text)
 async def handle_add_placement(message: Message, state: FSMContext):
     await state.update_data(content=message.text)
-    await state.set_state(PlacementAdd.video_link)
     await message.answer('Хотите добавить ссылку на видео?',
                          reply_markup=yes_no_kb.as_markup())
 
 
+async def send_placement_data(data: dict):
+    url = os.getenv('PLACEMENTS_URL')
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url=url, json=data) as response:
+            await response.json()
+    return response.status
+
+
 @router.callback_query(lambda c: c.data in ["да", "нет"])
 async def handle_vido_link_confirmation(callback_query: types.CallbackQuery,
-                              state: FSMContext):
+                                        state: FSMContext):
     await callback_query.answer()
     if callback_query.data == 'нет':
-        await state.set_state(PlacementAdd.publish)
+        await state.update_data(video_link=None)
+        data = await state.get_data()
+        payload = {
+            'title': data.get('title'),
+            'content': data.get('content'),
+            'video_link': None
+        }
+        match data.get('title'):
+            case 'Голова':
+                payload['body_part'] = 'head'
+            case 'Позвоночник':
+                payload['body_part'] = 'spine'
+            case 'Конечности':
+                payload['body_part'] = 'limbs'
+            case 'Грудь':
+                payload['body_part'] = 'thorax'
+            case 'Живот':
+                payload['body_part'] = 'abdomen'
+        await state.clear()
+        result = await send_placement_data(payload)
+        await callback_query.message.answer(str(result))
     else:
         await state.set_state(PlacementAdd.video_link)
         await callback_query.message.answer('Введите ссылку на видео')
@@ -90,27 +116,30 @@ async def handle_vido_link_confirmation(callback_query: types.CallbackQuery,
 @router.message(PlacementAdd.video_link, F.text)
 async def handle_video_link(message: Message, state: FSMContext):
     video_link = message.text
-    await state.update_data(video_link=video_link)
+    await state.update_data(video_link=video_link) if video_link else None
     await state.set_state(PlacementAdd.publish)
     await message.answer(f'Ссылка на видео добавлена: {video_link}')
-
-
-@router.message(PlacementAdd.publish)
-async def send_placement_data(message:Message, state:FSMContext):
-    url = os.getenv('PLACEMENTS_URL')
     data = await state.get_data()
     payload = {
         'title': data.get('title'),
         'content': data.get('content'),
         'video_link': data.get('video_link', None)
     }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url=url, json=payload) as response:
-            response_data = await response.json()
-            response_code = response.status
-    await message.answer(f'{url}, \n {data} \n {payload}')
-    await message.answer(f'Всё готово. \n {response_data}, {response_code}')
+    match data.get('title'):
+        case 'Голова':
+            payload['body_part'] = 'head'
+        case 'Позвоночник':
+            payload['body_part'] = 'spine'
+        case 'Конечности':
+            payload['body_part'] = 'limbs'
+        case 'Грудь':
+            payload['body_part'] = 'thorax'
+        case 'Живот':
+            payload['body_part'] = 'abdomen'
     await state.clear()
+    result = await send_placement_data(payload)
+    await message.answer(str(result))
+
 
 @router.message(F.text.in_(KEYWORDS[:6]))
 async def request_placements(message: Message):
