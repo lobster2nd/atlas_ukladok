@@ -13,6 +13,17 @@ services:
     networks:
       - custom
 
+  bot:
+    container_name: "telegram_bot"
+    build: .
+    restart: always
+    volumes:
+      - .:/app
+    networks:
+      - custom
+    command: >
+      python tg_bot/run.py
+
   web:
     container_name: "django_app"
     build: .
