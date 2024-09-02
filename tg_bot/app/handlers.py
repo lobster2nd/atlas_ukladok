@@ -9,6 +9,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 import logging
 
+from django.template.defaultfilters import title
+
 from .states import PlacementAdd
 
 from dotenv import load_dotenv
@@ -51,7 +53,7 @@ async def cmd_start(message: Message):
 
 @router.message(Command('add', prefix='/'))
 async def add_placement(message: Message, state: FSMContext):
-    await state.set_state(PlacementAdd.title)
+    await state.set_state(PlacementAdd.body_part)
     await message.answer('Выберете анатомическую область',
                          reply_markup=body_parts_inline_kb.as_markup())
 
@@ -60,11 +62,18 @@ async def add_placement(message: Message, state: FSMContext):
 async def handle_body_part_selection(callback_query: types.CallbackQuery,
                                      state: FSMContext):
     selected_part = callback_query.data
-    await state.update_data(title=selected_part)
-    await state.set_state(PlacementAdd.content)
+    await state.update_data(body_part=selected_part)
+    await state.set_state(PlacementAdd.title)
     await callback_query.answer()
     await callback_query.message.answer(f'Вы выбрали: {selected_part} \n'
-                                        f'Введите текст')
+                                        f'Введите название укладки')
+
+
+@router.message(PlacementAdd.title, F.text)
+async def handle_add_title(message: Message, state: FSMContext):
+    await state.update_data(title=message.text)
+    await state.set_state(PlacementAdd.content)
+    await message.answer('Введите текст')
 
 
 @router.message(PlacementAdd.content, F.text)
@@ -72,6 +81,27 @@ async def handle_add_placement(message: Message, state: FSMContext):
     await state.update_data(content=message.text)
     await message.answer('Хотите добавить ссылку на видео?',
                          reply_markup=yes_no_kb.as_markup())
+
+
+async def form_payload(data: dict) -> dict:
+    payload = {
+        'title': data.get('title'),
+        'body_part': data.get('body_part'),
+        'content': data.get('content'),
+        'video_link': data.get('video_link') if data.get('video_link') else None
+    }
+    match data.get('body_part'):
+        case 'Голова':
+            payload['body_part'] = 'head'
+        case 'Позвоночник':
+            payload['body_part'] = 'spine'
+        case 'Конечности':
+            payload['body_part'] = 'limbs'
+        case 'Грудь':
+            payload['body_part'] = 'thorax'
+        case 'Живот':
+            payload['body_part'] = 'abdomen'
+    return payload
 
 
 async def send_placement_data(data: dict):
@@ -89,24 +119,9 @@ async def handle_vido_link_confirmation(callback_query: types.CallbackQuery,
     if callback_query.data == 'нет':
         await state.update_data(video_link=None)
         data = await state.get_data()
-        payload = {
-            'title': data.get('title'),
-            'content': data.get('content'),
-            'video_link': None
-        }
-        match data.get('title'):
-            case 'Голова':
-                payload['body_part'] = 'head'
-            case 'Позвоночник':
-                payload['body_part'] = 'spine'
-            case 'Конечности':
-                payload['body_part'] = 'limbs'
-            case 'Грудь':
-                payload['body_part'] = 'thorax'
-            case 'Живот':
-                payload['body_part'] = 'abdomen'
+        payload = form_payload(data=data)
         await state.clear()
-        result = await send_placement_data(payload)
+        result = await send_placement_data(await payload)
         await callback_query.message.answer(str(result))
     else:
         await state.set_state(PlacementAdd.video_link)
@@ -118,27 +133,12 @@ async def handle_video_link(message: Message, state: FSMContext):
     video_link = message.text
     await state.update_data(video_link=video_link) if video_link else None
     await state.set_state(PlacementAdd.publish)
-    await message.answer(f'Ссылка на видео добавлена: {video_link}')
+    await message.answer(f'Ссылка на видео добавлена')
     data = await state.get_data()
-    payload = {
-        'title': data.get('title'),
-        'content': data.get('content'),
-        'video_link': data.get('video_link', None)
-    }
-    match data.get('title'):
-        case 'Голова':
-            payload['body_part'] = 'head'
-        case 'Позвоночник':
-            payload['body_part'] = 'spine'
-        case 'Конечности':
-            payload['body_part'] = 'limbs'
-        case 'Грудь':
-            payload['body_part'] = 'thorax'
-        case 'Живот':
-            payload['body_part'] = 'abdomen'
+    payload = form_payload(data=data)
     await state.clear()
-    result = await send_placement_data(payload)
-    await message.answer(str(result))
+    result = await send_placement_data(await payload)
+    await message.answer('Добавление завершено', str(result))
 
 
 @router.message(F.text.in_(KEYWORDS[:6]))
