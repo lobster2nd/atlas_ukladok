@@ -1,19 +1,17 @@
 import os
 
 import aiohttp
-
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
-import logging
 
-from django.template.defaultfilters import title
+import logging
+from dotenv import load_dotenv
 
 from .states import PlacementAdd
-
-from dotenv import load_dotenv
+from .utils import form_payload, send_placement_data, send_image_data
 
 load_dotenv()
 
@@ -54,9 +52,9 @@ async def cmd_start(message: Message):
 @router.message(Command('add', prefix='/'))
 async def add_placement(message: Message, state: FSMContext):
     """Обработка запроса на добавление укладки"""
-    await state.set_state(PlacementAdd.body_part)
     await message.answer('Выберете анатомическую область',
                          reply_markup=body_parts_inline_kb.as_markup())
+    await state.set_state(PlacementAdd.body_part)
 
 
 @router.callback_query(lambda c: c.data in KEYWORDS)
@@ -65,18 +63,18 @@ async def handle_body_part_selection(callback_query: types.CallbackQuery,
     """Обработка выбора области"""
     selected_part = callback_query.data
     await state.update_data(body_part=selected_part)
-    await state.set_state(PlacementAdd.title)
     await callback_query.answer()
     await callback_query.message.answer(f'Вы выбрали: {selected_part} \n'
                                         f'Введите название укладки')
+    await state.set_state(PlacementAdd.title)
 
 
 @router.message(PlacementAdd.title, F.text)
 async def handle_add_title(message: Message, state: FSMContext):
     """Обработка введённого названия укладки"""
     await state.update_data(title=message.text)
-    await state.set_state(PlacementAdd.content)
     await message.answer('Введите текст')
+    await state.set_state(PlacementAdd.content)
 
 
 @router.message(PlacementAdd.content, F.text)
@@ -85,54 +83,41 @@ async def handle_add_placement(message: Message, state: FSMContext):
     await state.update_data(content=message.text)
     await message.answer('Хотите добавить ссылку на видео?',
                          reply_markup=yes_no_kb.as_markup())
-
-
-async def form_payload(data: dict) -> dict:
-    """Формирование данных для POST запроса о добавлении укладки"""
-    payload = {
-        'title': data.get('title'),
-        'body_part': data.get('body_part'),
-        'content': data.get('content'),
-        'video_link': data.get('video_link') if data.get('video_link') else None
-    }
-    match data.get('body_part'):
-        case 'Голова':
-            payload['body_part'] = 'head'
-        case 'Позвоночник':
-            payload['body_part'] = 'spine'
-        case 'Конечности':
-            payload['body_part'] = 'limbs'
-        case 'Грудь':
-            payload['body_part'] = 'thorax'
-        case 'Живот':
-            payload['body_part'] = 'abdomen'
-    return payload
-
-
-async def send_placement_data(data: dict):
-    """Отправка запроса на добавление укладки"""
-    url = os.getenv('PLACEMENTS_URL')
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url=url, json=data) as response:
-            await response.json()
-    return response.status
+    await state.set_state(PlacementAdd.video_link)
 
 
 @router.callback_query(lambda c: c.data in ["да", "нет"])
-async def handle_vido_link_confirmation(callback_query: types.CallbackQuery,
-                                        state: FSMContext):
-    """Вопрос пользователю о добавлении ссылки на видео"""
+async def handle_confirmation(callback_query: types.CallbackQuery,
+                              state: FSMContext):
+    """Обработка подтверждения добавления видео или изображения"""
     await callback_query.answer()
-    if callback_query.data == 'нет':
-        await state.update_data(video_link=None)
-        data = await state.get_data()
-        payload = form_payload(data=data)
-        await state.clear()
-        result = await send_placement_data(await payload)
-        await callback_query.message.answer(str(result))
-    else:
-        await state.set_state(PlacementAdd.video_link)
-        await callback_query.message.answer('Введите ссылку на видео')
+
+    current_state = await state.get_state()
+
+    if current_state == PlacementAdd.video_link.state:
+        if callback_query.data == 'нет':
+            await state.update_data(video_link=None)
+            data = await state.get_data()
+            payload = form_payload(data=data)
+            response = await send_placement_data(await payload)
+            await state.update_data(placement_id=response['id'])
+            await callback_query.message.answer(
+                'Данные добавлены\n'
+                'Хотите добавить изображение?',
+                reply_markup=yes_no_kb.as_markup()
+            )
+            await state.set_state(PlacementAdd.image)
+        else:
+            await state.set_state(PlacementAdd.video_link)
+            await callback_query.message.answer('Введите ссылку на видео')
+
+    elif current_state == PlacementAdd.image.state:
+        if callback_query.data == 'нет':
+            await callback_query.message.answer('Добавление завершено')
+            await state.clear()
+        else:
+            await callback_query.message.answer('Добавьте изображение')
+            await state.set_state(PlacementAdd.image)
 
 
 @router.message(PlacementAdd.video_link, F.text)
@@ -144,12 +129,31 @@ async def handle_video_link(message: Message, state: FSMContext):
     await message.answer(f'Ссылка на видео добавлена')
     data = await state.get_data()
     payload = form_payload(data=data)
-    await state.clear()
     result = await send_placement_data(await payload)
     await message.answer('Добавление завершено', str(result))
+    await state.set_state(PlacementAdd.image)
 
 
-@router.message(F.text.in_(KEYWORDS[:6]))
+@router.message(PlacementAdd.image)
+async def handle_image(message: Message, state: FSMContext):
+    """Добавление изображения"""
+    if message.content_type != 'photo':
+        await message.answer('Необходимо отправить изображение')
+    else:
+        data = await state.get_data()
+        placement_id = str(data.get('placement_id'))
+        photo = message.photo[-1]  # Получаем наибольшее качество изображения
+        file_id = photo.file_id
+        file = await message.bot.get_file(file_id)
+        image_file = await message.bot.download_file(file.file_path)
+        response_data = await send_image_data(image_file, placement_id)
+        await message.answer(
+            f'Изображение успешно добавлено! Ответ от сервера: {response_data}'
+        )
+        await state.clear()
+
+
+@router.message(F.text.in_(KEYWORDS))
 async def request_placements(message: Message):
     """Запрос списка укалдок выбранной категории"""
 
