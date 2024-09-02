@@ -53,6 +53,7 @@ async def cmd_start(message: Message):
 
 @router.message(Command('add', prefix='/'))
 async def add_placement(message: Message, state: FSMContext):
+    """Обработка запроса на добавление укладки"""
     await state.set_state(PlacementAdd.body_part)
     await message.answer('Выберете анатомическую область',
                          reply_markup=body_parts_inline_kb.as_markup())
@@ -61,6 +62,7 @@ async def add_placement(message: Message, state: FSMContext):
 @router.callback_query(lambda c: c.data in KEYWORDS)
 async def handle_body_part_selection(callback_query: types.CallbackQuery,
                                      state: FSMContext):
+    """Обработка выбора области"""
     selected_part = callback_query.data
     await state.update_data(body_part=selected_part)
     await state.set_state(PlacementAdd.title)
@@ -71,6 +73,7 @@ async def handle_body_part_selection(callback_query: types.CallbackQuery,
 
 @router.message(PlacementAdd.title, F.text)
 async def handle_add_title(message: Message, state: FSMContext):
+    """Обработка введённого названия укладки"""
     await state.update_data(title=message.text)
     await state.set_state(PlacementAdd.content)
     await message.answer('Введите текст')
@@ -78,12 +81,14 @@ async def handle_add_title(message: Message, state: FSMContext):
 
 @router.message(PlacementAdd.content, F.text)
 async def handle_add_placement(message: Message, state: FSMContext):
+    """Обработка текста укладки"""
     await state.update_data(content=message.text)
     await message.answer('Хотите добавить ссылку на видео?',
                          reply_markup=yes_no_kb.as_markup())
 
 
 async def form_payload(data: dict) -> dict:
+    """Формирование данных для POST запроса о добавлении укладки"""
     payload = {
         'title': data.get('title'),
         'body_part': data.get('body_part'),
@@ -105,6 +110,7 @@ async def form_payload(data: dict) -> dict:
 
 
 async def send_placement_data(data: dict):
+    """Отправка запроса на добавление укладки"""
     url = os.getenv('PLACEMENTS_URL')
     async with aiohttp.ClientSession() as session:
         async with session.post(url=url, json=data) as response:
@@ -115,6 +121,7 @@ async def send_placement_data(data: dict):
 @router.callback_query(lambda c: c.data in ["да", "нет"])
 async def handle_vido_link_confirmation(callback_query: types.CallbackQuery,
                                         state: FSMContext):
+    """Вопрос пользователю о добавлении ссылки на видео"""
     await callback_query.answer()
     if callback_query.data == 'нет':
         await state.update_data(video_link=None)
@@ -130,6 +137,7 @@ async def handle_vido_link_confirmation(callback_query: types.CallbackQuery,
 
 @router.message(PlacementAdd.video_link, F.text)
 async def handle_video_link(message: Message, state: FSMContext):
+    """Обработка ссылки на видео"""
     video_link = message.text
     await state.update_data(video_link=video_link) if video_link else None
     await state.set_state(PlacementAdd.publish)
