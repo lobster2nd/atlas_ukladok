@@ -3,7 +3,7 @@ import os
 import aiohttp
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 
@@ -160,8 +160,8 @@ async def request_placements(message: Message):
 
     builder = InlineKeyboardBuilder()
     for placement in placements:
-        builder.button(text=placement['title'],
-                       callback_data=str(placement['id']))
+        builder.row(InlineKeyboardButton(text=placement['title'],
+                                         callback_data=str(placement['id'])))
 
     await message.answer('Есть такие укладки:',
                          reply_markup=builder.as_markup())
