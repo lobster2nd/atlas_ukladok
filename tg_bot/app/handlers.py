@@ -125,12 +125,13 @@ async def handle_video_link(message: Message, state: FSMContext):
     """Обработка ссылки на видео"""
     video_link = message.text
     await state.update_data(video_link=video_link) if video_link else None
-    await state.set_state(PlacementAdd.publish)
-    await message.answer(f'Ссылка на видео добавлена')
     data = await state.get_data()
     payload = form_payload(data=data)
-    result = await send_placement_data(await payload)
-    await message.answer('Добавление завершено', str(result))
+    response = await send_placement_data(await payload)
+    await state.update_data(placement_id=response['id'])
+    await message.answer('Ссылка на видео добавлена\n'
+                         'Хотите добавить изображение?',
+                         reply_markup=yes_no_kb.as_markup())
     await state.set_state(PlacementAdd.image)
 
 
