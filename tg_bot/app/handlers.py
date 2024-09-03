@@ -3,13 +3,14 @@ import os
 import aiohttp
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 
 import logging
 from dotenv import load_dotenv
 
+from .keyboards import main_kb, body_parts_inline_kb, yes_no_kb, KEYWORDS
 from .states import PlacementAdd
 from .utils import form_payload, send_placement_data, send_image_data
 
@@ -21,32 +22,12 @@ logger = logging.getLogger(__name__)
 
 router = Router()
 
-KEYWORDS = ['Голова', 'Позвоночник', 'Конечности', 'Грудь', 'Живот',
-            'Весь список']
-
-main_kb = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text=KEYWORDS[0]), KeyboardButton(text=KEYWORDS[1])],
-    [KeyboardButton(text=KEYWORDS[2]), KeyboardButton(text=KEYWORDS[3])],
-    [KeyboardButton(text=KEYWORDS[4]), KeyboardButton(text=KEYWORDS[5])],
-], resize_keyboard=True)
-
-body_parts_inline_kb = InlineKeyboardBuilder()
-for part in KEYWORDS[:5]:
-    body_parts_inline_kb.button(text=part, callback_data=part)
-    body_parts_inline_kb.row()
-
-yes_no_kb = InlineKeyboardBuilder()
-yes_no_kb.button(text="Да", callback_data="да")
-yes_no_kb.button(text="Нет", callback_data="нет")
-yes_no_kb.row()
-
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     """Стартовое меню с выбором анатомической области"""
     await message.answer('Какая укладка вас интересует?',
-                         reply_markup=main_kb
-                         )
+                         reply_markup=main_kb)
 
 
 @router.message(Command('add', prefix='/'))
@@ -190,11 +171,16 @@ async def request_placements(message: Message):
 async def handle_placement_selection(callback_query: types.CallbackQuery):
     """В ответ на выбранную укладку возвращается текст и изображение"""
 
+    await callback_query.answer()
     url = os.getenv('PLACEMENTS_URL') + f'{callback_query.data}/'
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             response_data = await response.json()
     await callback_query.message.answer(text=response_data['content'])
+
+    if response_data['video_link']:
+        link = response_data['video_link']
+        await callback_query.message.answer(f'Видео: {link}')
 
     if response_data['images']:
         media_url = os.getenv('MEDIA_URL')
