@@ -4,7 +4,7 @@ import aiohttp
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, InlineKeyboardButton, ContentType, \
-ReplyKeyboardRemove
+    ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 
@@ -27,13 +27,29 @@ router = Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    """Стартовое меню с выбором анатомической области"""
+    """Стартовое сообщение приветствия"""
+    await message.answer(f'Добро пожаловать! Выберете интересующую команду\n')
+    await cmd_help(message)
+
+
+@router.message(Command('help', prefix='/'))
+async def cmd_help(message: Message):
+    """Список команд бота"""
+    menu = ('/list - Cписок доступных укладок\n'
+            '/add - Добавить новую укладку\n'
+            '/help - Показать список команд')
+    await message.answer(menu)
+
+
+@router.message(Command('list', prefix='/'))
+async def cmd_list(message: Message):
+    """Меню с выбором анатомической области"""
     await message.answer('Какая укладка вас интересует?',
                          reply_markup=main_kb)
 
 
 @router.message(Command('add', prefix='/'))
-async def add_placement(message: Message, state: FSMContext):
+async def cmd_add_placement(message: Message, state: FSMContext):
     """Обработка запроса на добавление укладки"""
     await message.answer('Выберете анатомическую область',
                          reply_markup=body_parts_inline_kb.as_markup())
