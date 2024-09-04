@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins, status, filters
 from rest_framework.parsers import MultiPartParser, FormParser, \
@@ -81,7 +82,25 @@ class ImageModelViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
 
         Добавить новую иллюстрацию
         """
-        return super().create(request, *args, **kwargs)
+        photos = request.FILES.getlist('photo')  # Получаем список изображений
+        description = request.data.get('description')
+        placement_id = request.data.get('placement')
+
+        placement = get_object_or_404(Placement, id=placement_id)
+
+        if not photos:
+            return Response({"error": "Нет изображений."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        created_images = []
+        for photo in photos:
+            image_instance = Image(photo=photo, description=description,
+                                   placement=placement)
+            image_instance.save()
+            created_images.append(image_instance)
+
+        serializer = self.get_serializer(created_images, many=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         """

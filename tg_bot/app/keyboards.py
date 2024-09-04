@@ -10,6 +10,10 @@ main_kb = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text=KEYWORDS[4]), KeyboardButton(text=KEYWORDS[5])],
 ], resize_keyboard=True)
 
+finish_kb = ReplyKeyboardMarkup(keyboard=[
+    [KeyboardButton(text='Завершить загрузку')]
+], resize_keyboard=True)
+
 body_parts_inline_kb = InlineKeyboardBuilder()
 for part in KEYWORDS[:5]:
     body_parts_inline_kb.button(text=part, callback_data=part)

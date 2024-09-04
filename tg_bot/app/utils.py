@@ -1,6 +1,5 @@
 import logging
 import os
-from time import time
 
 import aiohttp
 
@@ -35,16 +34,18 @@ async def send_placement_data(data: dict):
     return response_data
 
 
-async def send_image_data(image, placement_id):
+async def send_image_data(images, placement_id):
     """Отправка запроса на добавление изображения к укладке"""
     url = os.getenv('IMAGE_ADD_URL')
     async with aiohttp.ClientSession() as session:
+        responses = []
         form_data = aiohttp.FormData()
-        form_data.add_field('placement', placement_id)
-        form_data.add_field('photo', image,
-                            filename=f'image{placement_id}-{int(time())}.jpg',
-                            content_type='image/jpeg')
-        logging.info(form_data)
+        for image in images:
+            form_data.add_field('placement', placement_id)
+            form_data.add_field('photo', image,
+                                filename=f'image{placement_id}.jpg',
+                                content_type='image/jpeg')
         async with session.post(url=url, data=form_data) as response:
             response_data = await response.json()
-            return response_data
+            responses.append(response_data)
+            return responses

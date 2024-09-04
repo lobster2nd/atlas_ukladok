@@ -7,4 +7,5 @@ class PlacementAdd(StatesGroup):
     content = State()
     video_link = State()
     publish = State()
-    image = State()
+    image_add = State()
+    image_send = State()

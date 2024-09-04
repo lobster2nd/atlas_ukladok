@@ -3,14 +3,16 @@ import os
 import aiohttp
 from aiogram import F, Router, types
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, InlineKeyboardButton
+from aiogram.types import Message, InlineKeyboardButton, ContentType, \
+ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.fsm.context import FSMContext
 
 import logging
 from dotenv import load_dotenv
 
-from .keyboards import main_kb, body_parts_inline_kb, yes_no_kb, KEYWORDS
+from .keyboards import main_kb, body_parts_inline_kb, yes_no_kb, KEYWORDS, \
+    finish_kb
 from .states import PlacementAdd
 from .utils import form_payload, send_placement_data, send_image_data
 
@@ -46,7 +48,8 @@ async def handle_body_part_selection(callback_query: types.CallbackQuery,
     await state.update_data(body_part=selected_part)
     await callback_query.answer()
     await callback_query.message.answer(f'Вы выбрали: {selected_part} \n'
-                                        f'Введите название укладки')
+                                        f'Введите название укладки',
+                                        reply_markup=ReplyKeyboardRemove())
     await state.set_state(PlacementAdd.title)
 
 
@@ -87,18 +90,19 @@ async def handle_confirmation(callback_query: types.CallbackQuery,
                 'Хотите добавить изображение?',
                 reply_markup=yes_no_kb.as_markup()
             )
-            await state.set_state(PlacementAdd.image)
+            await state.set_state(PlacementAdd.image_add)
         else:
             await state.set_state(PlacementAdd.video_link)
             await callback_query.message.answer('Введите ссылку на видео')
 
-    elif current_state == PlacementAdd.image.state:
+    elif current_state == PlacementAdd.image_add.state:
         if callback_query.data == 'нет':
             await callback_query.message.answer('Добавление завершено')
             await state.clear()
         else:
-            await callback_query.message.answer('Добавьте изображение')
-            await state.set_state(PlacementAdd.image)
+            await callback_query.message.answer('Добавьте до 10 изображений')
+            await state.update_data(uploaded_images=[])
+            await state.set_state(PlacementAdd.image_add)
 
 
 @router.message(PlacementAdd.video_link, F.text)
@@ -113,26 +117,56 @@ async def handle_video_link(message: Message, state: FSMContext):
     await message.answer('Ссылка на видео добавлена\n'
                          'Хотите добавить изображение?',
                          reply_markup=yes_no_kb.as_markup())
-    await state.set_state(PlacementAdd.image)
+    await state.set_state(PlacementAdd.image_add)
 
 
-@router.message(PlacementAdd.image)
+@router.message(PlacementAdd.image_add)
 async def handle_image(message: Message, state: FSMContext):
-    """Добавление изображения"""
-    if message.content_type != 'photo':
+    """Добавление изображений"""
+
+    if message.content_type != ContentType.PHOTO:
         await message.answer('Необходимо отправить изображение')
-    else:
-        data = await state.get_data()
-        placement_id = str(data.get('placement_id'))
-        photo = message.photo[-1]  # Получаем наибольшее качество изображения
-        file_id = photo.file_id
-        file = await message.bot.get_file(file_id)
-        image_file = await message.bot.download_file(file.file_path)
-        response_data = await send_image_data(image_file, placement_id)
-        await message.answer(
-            f'Изображение успешно добавлено! Ответ от сервера: {response_data}'
-        )
-        await state.clear()
+        return
+
+    data = await state.get_data()
+    uploaded_images = data.get('uploaded_images', [])
+
+    photo = message.photo[-1]
+    file_id = photo.file_id
+    file = await message.bot.get_file(file_id)
+    image_file = await message.bot.download_file(file.file_path)
+
+    uploaded_images.append(image_file)
+
+    await state.update_data(uploaded_images=uploaded_images)
+    await message.answer(f'Изображение добавлено!',
+                         reply_markup=finish_kb)
+    await state.set_state(PlacementAdd.image_send)
+
+
+@router.message(PlacementAdd.image_send)
+async def finish_upload(message: Message, state: FSMContext):
+    """Завершение загрузки изображений"""
+    data = await state.get_data()
+    uploaded_images = data.get('uploaded_images', [])
+    placement_id = str(data.get('placement_id'))
+
+    if not uploaded_images:
+        await message.answer('Нет загруженных изображений.')
+        await state.set_state(PlacementAdd.image_add)
+        return
+
+    elif len(uploaded_images) > 10:
+        await message.answer('Не более 10 изображений')
+        await state.update_data(uploaded_images=[])
+        return
+
+    await send_image_data(uploaded_images, placement_id)
+    await message.answer(
+        f'Изображения успешно добавлены!',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.clear()
 
 
 @router.message(F.text.in_(KEYWORDS))
