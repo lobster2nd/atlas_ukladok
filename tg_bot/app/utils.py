@@ -1,7 +1,7 @@
-import logging
 import os
 
 import aiohttp
+
 
 async def form_payload(data: dict) -> dict:
     """Формирование данных для POST запроса о добавлении укладки"""
@@ -9,7 +9,8 @@ async def form_payload(data: dict) -> dict:
         'title': data.get('title'),
         'body_part': data.get('body_part'),
         'content': data.get('content'),
-        'video_link': data.get('video_link') if data.get('video_link') else None
+        'video_link': data.get('video_link') if data.get('video_link') else None,
+        'tg_user': data.get('tg_user')
     }
     match data.get('body_part'):
         case 'Голова':

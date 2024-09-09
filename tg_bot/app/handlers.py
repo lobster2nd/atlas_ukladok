@@ -98,7 +98,14 @@ async def handle_confirmation(callback_query: types.CallbackQuery,
         if callback_query.data == 'нет':
             await state.update_data(video_link=None)
             data = await state.get_data()
+
+            tg_user = '@' + callback_query.from_user.username \
+                or callback_query.from_user.first_name
+
+            data['tg_user'] = tg_user
+
             payload = form_payload(data=data)
+
             response = await send_placement_data(await payload)
             await state.update_data(placement_id=response['id'])
             await callback_query.message.answer(
@@ -124,10 +131,16 @@ async def handle_confirmation(callback_query: types.CallbackQuery,
 @router.message(PlacementAdd.video_link, F.text)
 async def handle_video_link(message: Message, state: FSMContext):
     """Обработка ссылки на видео"""
+
     video_link = message.text
     await state.update_data(video_link=video_link) if video_link else None
+
     data = await state.get_data()
+    tg_user = '@' + message.from_user.username or message.from_user.first_name
+    data['tg_user'] = tg_user
+
     payload = form_payload(data=data)
+
     response = await send_placement_data(await payload)
     await state.update_data(placement_id=response['id'])
     await message.answer('Ссылка на видео добавлена\n'
