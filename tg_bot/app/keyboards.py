@@ -1,4 +1,5 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, \
+    InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 KEYWORDS = ['Голова', 'Позвоночник', 'Конечности', 'Грудь', 'Живот',
@@ -16,8 +17,8 @@ finish_kb = ReplyKeyboardMarkup(keyboard=[
 
 body_parts_inline_kb = InlineKeyboardBuilder()
 for part in KEYWORDS[:5]:
-    body_parts_inline_kb.button(text=part, callback_data=part)
-    body_parts_inline_kb.row()
+    body_parts_inline_kb.row(InlineKeyboardButton(text=part,
+                                                  callback_data=part))
 
 yes_no_kb = InlineKeyboardBuilder()
 yes_no_kb.button(text="Да", callback_data="да")
