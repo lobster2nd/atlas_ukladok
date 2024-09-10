@@ -31,6 +31,8 @@ urlpatterns = [
     # path('api/', include('api_auth_app.urls')),
     path('api/', include('api_profile_app.urls')),
     path('api/', include('api_atlas_app.urls')),
+    path('auth/', include('djoser.urls')),
+    path('auth/', include('djoser.urls.jwt')),
 ]
 
 urlpatterns += doc_urls
