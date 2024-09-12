@@ -9,5 +9,5 @@ router.register('placement', PlacementModelViewSet, basename='placement')
 router.register('image', ImageModelViewSet, basename='image')
 
 urlpatterns = [
-    path('v1/atlas/', include(router.urls)),
+    path('', include(router.urls)),
 ]
