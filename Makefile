@@ -6,6 +6,7 @@ down:
 
 restart: down up
 
+
 logs:
 	docker compose -f docker-compose-local.yaml logs -f
 
@@ -17,3 +18,7 @@ logs-db:
 
 logs-bot:
 	docker compose -f docker-compose-local.yaml logs -f bot
+
+
+console-web:
+	docker exec -it django_app sh
