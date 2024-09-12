@@ -26,66 +26,71 @@ def check_attempts_cnt(address: str):
             attempts_cnt=3, access_at=None)
 
 
-class CreateCodeSerializer(ModelSerializer):
-    """Создание кода подтверждения"""
-
-    address = serializers.CharField(help_text='Куда направлен код')
-
-    class Meta:
-        model = UserCodeVerify
-        fields = ('address', )
-
-    def validate(self, attrs):
-        start_period = datetime.now() - timedelta(hours=12)
-        if UserCodeVerify.objects.filter(created_at__gte=start_period,
-                                         address=attrs['address']).count() > 1:
-            raise ValidationError({'error': 'Лимит запросов исчерпан'})
-        return attrs
+class CreateCodeSerializer(serializers.Serializer):
+    address = serializers.EmailField(required=True,
+                                     help_text='куда прислать код')
 
 
-class GetUserTokenSerializer(TokenObtainPairSerializer):
-    """Выдать токен по логину"""
-
-    def __init__(self, username):
-        self.user = User.objects.get(username=username)
-
-    def get(self):
-        data = dict()
-
-        check_attempts_cnt(self.user.username)
-
-        refresh = self.get_token(self.user)
-        data["refresh"] = str(refresh)
-        data["access"] = str(refresh.access_token)
-
-        update_last_login(None, self.user)
-
-        return data
-
-
-class GetFromCodeTokenSerializer(ModelSerializer):
-    """Выдача токена по подноразовому коду"""
-
-    address = serializers.CharField(help_text='Куда пришел код')
-    code = serializers.CharField(help_text='Код')
-
-    class Meta:
-        model = UserCodeVerify
-        fields = ['address', 'code']
-
-    def validate(self, attrs):
-
-        address = attrs.get('address')
-        user = User.objects.filter(username=address).first()
-        password = f'{address}'
-
-        if not user:
-            user = User.objects.create_user(
-                username=address,
-                password=password,
-            )
-            user.save()
-
-        refresh = GetUserTokenSerializer(username=address).get()
-
-        return refresh
+# class CreateCodeSerializer(ModelSerializer):
+#     """Создание кода подтверждения"""
+#
+#     address = serializers.CharField(help_text='Куда направлен код')
+#
+#     class Meta:
+#         model = UserCodeVerify
+#         fields = ('address', )
+#
+#     def validate(self, attrs):
+#         start_period = datetime.now() - timedelta(hours=12)
+#         if UserCodeVerify.objects.filter(created_at__gte=start_period,
+#                                          address=attrs['address']).count() > 1:
+#             raise ValidationError({'error': 'Лимит запросов исчерпан'})
+#         return attrs
+#
+#
+# class GetUserTokenSerializer(TokenObtainPairSerializer):
+#     """Выдать токен по логину"""
+#
+#     def __init__(self, username):
+#         self.user = User.objects.get(username=username)
+#
+#     def get(self):
+#         data = dict()
+#
+#         check_attempts_cnt(self.user.username)
+#
+#         refresh = self.get_token(self.user)
+#         data["refresh"] = str(refresh)
+#         data["access"] = str(refresh.access_token)
+#
+#         update_last_login(None, self.user)
+#
+#         return data
+#
+#
+# class GetFromCodeTokenSerializer(ModelSerializer):
+#     """Выдача токена по подноразовому коду"""
+#
+#     address = serializers.CharField(help_text='Куда пришел код')
+#     code = serializers.CharField(help_text='Код')
+#
+#     class Meta:
+#         model = UserCodeVerify
+#         fields = ['address', 'code']
+#
+#     def validate(self, attrs):
+#
+#         address = attrs.get('address')
+#         user = User.objects.filter(username=address).first()
+#         password = f'{address}'
+#
+#         if not user:
+#             user = User.objects.create_user(
+#                 username=address,
+#                 password=password,
+#             )
+#             user.save()
+#
+#         refresh = GetUserTokenSerializer(username=address).get()
+#
+#         return refresh
