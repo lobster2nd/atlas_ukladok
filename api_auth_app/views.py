@@ -12,7 +12,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from api_profile_app.models import User
 from core import settings
 from .models import UserCodeVerify
-from .serializers import CreateCodeSerializer, VerifyCodeSerializer
+from .serializers import CreateCodeSerializer, VerifyCodeSerializer, \
+    RefreshTokenSerializer
 
 
 def send_confirmation_code(user_address, confirmation_code):
@@ -114,4 +115,32 @@ class VerifyCodeViewSet(mixins.CreateModelMixin, GenericViewSet):
 
         else:
             return Response({'error': 'Что-то не так. Всё сломалось'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+
+class RefreshTokenViewSet(mixins.CreateModelMixin, GenericViewSet):
+    """Получение access токена по refresh токену"""
+    permission_classes = (AllowAny, )
+    serializer_class = RefreshTokenSerializer
+    http_method_names = ('post', )
+
+    def create(self, request, *args, **kwargs):
+        """
+        Получить новый access токен
+
+        Получить новый access токен
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        refresh_token = serializer.validated_data['refresh']
+
+        try:
+            refresh = RefreshToken(refresh_token)
+            new_access_token = str(refresh.access_token)
+
+            return Response({'access': new_access_token},
+                            status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)},
                             status=status.HTTP_400_BAD_REQUEST)

@@ -10,6 +10,6 @@ router.register('profile', UserModelViewSet, basename='profile')
 urlpatterns = [
     path('profile/', UserModelViewSet.as_view(
         {'get': 'retrieve', 'patch': 'update'}), name='profile-detail'),
-    path('register/', UserModelViewSet.as_view({'post': 'create'}),
-         name='profile-register')
+    # path('register/', UserModelViewSet.as_view({'post': 'create'}),
+    #      name='profile-register')
 ]

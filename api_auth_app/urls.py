@@ -1,11 +1,12 @@
 from django.urls import path
 
-from .views import CreateCodeViewSet, VerifyCodeViewSet
+from .views import CreateCodeViewSet, VerifyCodeViewSet, RefreshTokenViewSet
 
 urlpatterns = [
     path('send_code/', CreateCodeViewSet.as_view(
         {'post': 'create'}), name='send_code'),
-    path('get_token/', VerifyCodeViewSet.as_view(
-        {'post': 'create'}), name='get_token'
-         )
+    path('token/get_tokens/', VerifyCodeViewSet.as_view(
+        {'post': 'create'}), name='get_tokens'),
+    path('token/refresh/', RefreshTokenViewSet.as_view(
+        {'post': 'create'}), name='refresh'),
 ]
