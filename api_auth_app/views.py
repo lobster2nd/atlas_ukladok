@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from random import randint
 
-from django.core.mail import send_mail
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework import mixins, status
@@ -10,20 +9,10 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from api_profile_app.models import User
-from core import settings
 from .models import UserCodeVerify
 from .serializers import CreateCodeSerializer, VerifyCodeSerializer, \
     RefreshTokenSerializer
-
-
-def send_confirmation_code(user_address, confirmation_code):
-    """Отправка кода подтверждения"""
-    subject = 'Код подтверждения'
-    message = f'Для входа на сайт введите код {confirmation_code}'
-    from_email = settings.EMAIL_HOST_USER
-    recipient_list = [user_address]
-
-    send_mail(subject, message, from_email, recipient_list)
+from .tasks import send_confirmation_code_task
 
 
 class CreateCodeViewSet(mixins.CreateModelMixin, GenericViewSet):
@@ -51,14 +40,18 @@ class CreateCodeViewSet(mixins.CreateModelMixin, GenericViewSet):
         # Обновляем новую запись если есть для контроля
         UserCodeVerify.objects.create(address=address, code=code)
 
-        try:
-            send_confirmation_code(address, code)
+        task_result = send_confirmation_code_task.delay(address, code)
+
+        if task_result.failed():
             return Response(
-                {"message": f"Код подтверждения отправлен на {address}"},
-                status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                {"error": "Не удалось отправить код подтверждения."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(
+            {"message": f"Код подтверждения отправлен на {address}"},
+            status=status.HTTP_200_OK
+        )
 
 
 class VerifyCodeViewSet(mixins.CreateModelMixin, GenericViewSet):
