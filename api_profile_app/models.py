@@ -38,3 +38,8 @@ class User(AbstractUser):
                                       verbose_name='время создания')
     updated_at = models.DateTimeField(auto_now=True,
                                       verbose_name='время обновления')
+
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = self.email  # Используем email в качестве username
+        super().save(*args, **kwargs)

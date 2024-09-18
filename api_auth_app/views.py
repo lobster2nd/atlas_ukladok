@@ -72,14 +72,17 @@ class VerifyCodeViewSet(mixins.CreateModelMixin, GenericViewSet):
         address = serializer.validated_data['address']
         code = serializer.validated_data['code']
 
+        # Удаляем коды, которые старше 12 часов
+        threshold_time = timezone.now() - timedelta(hours=12)
+        UserCodeVerify.objects.filter(created_at__lt=threshold_time).delete()
+
         user_address = UserCodeVerify.objects.filter(address=address).first()
 
         if not user_address:
             return Response({'error': 'Запросите код ещё раз'},
                             status=status.HTTP_404_NOT_FOUND)
 
-        elif user_address.attempts_cnt == 0 or \
-                user_address.access_at and timezone.now() - user_address.access_at > timedelta(hours=12):
+        elif user_address.attempts_cnt == 0:
             return Response({'error': 'Количество попыток исчерпано. '
                                             'Попробуйте через 12 часов'},
                             status=status.HTTP_403_FORBIDDEN)
