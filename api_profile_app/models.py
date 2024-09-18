@@ -30,6 +30,10 @@ class User(AbstractUser):
         verbose_name='дата рождения',
         help_text="дата рождения в формате временной метки",
         null=True, blank=True)
+    telegram = models.CharField(verbose_name='профиль telegram',
+                                help_text='профиль telegram',
+                                max_length=250, blank=True, null=True,
+                                unique=True)
     additional_information = models.TextField(
         verbose_name='дополнительная информация',
         blank=True, default='')

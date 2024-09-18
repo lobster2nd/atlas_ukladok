@@ -52,17 +52,18 @@ class PlacementModelViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin,
 
         elif 'tg_user' in self.request.data:
             author, created = User.objects.get_or_create(
-                username=self.request.data["tg_user"]
+                username=self.request.data["tg_user"],
+                telegram=self.request.data["tg_user"]
             )
             if created:
-                author.set_password('password')
+                # author.set_password('password')
                 author.save()
         else:
             author, created = User.objects.get_or_create(
                 username='Неизвестный пользователь')
 
             if created:
-                author.set_password('password')
+                # author.set_password('password')
                 author.save()
         return serializer.save(author=author)
 

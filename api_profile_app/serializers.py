@@ -6,6 +6,7 @@ from core.utils import TimestampField
 
 
 class ProfileUserSerializer(ModelSerializer):
+    """Сериализатор профиля пользователя"""
 
     uid = serializers.UUIDField(read_only=True)
     password = serializers.CharField(write_only=True, required=False,
@@ -24,6 +25,8 @@ class ProfileUserSerializer(ModelSerializer):
     avatar_url = serializers.ImageField(source='avatar', read_only=True,
                                         help_text='url-ссылка на аватар',
                                         use_url=True)
+    telegram = serializers.CharField(required=False,
+                                     help_text='профиль telegram')
 
     class Meta:
         model = User
@@ -38,6 +41,7 @@ class ProfileUserSerializer(ModelSerializer):
             'gender',
             'gender_label',
             'email',
+            'telegram',
             'avatar',
             'avatar_url',
         )
